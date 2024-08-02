@@ -32,7 +32,7 @@
         <exec.mainClass>org.enso.test.layer.use.Use</exec.mainClass>
         <exec.appArgs></exec.appArgs>
         <exec.vmArgs></exec.vmArgs>
-        <exec.args>${exec.vmArgs} -p %classpath -m Use/${exec.mainClass} ${exec.appArgs}</exec.args>
+        <exec.args>${exec.vmArgs} -ea -p %classpath -m Use/${exec.mainClass} ${exec.appArgs}</exec.args>
         <exec.executable>java</exec.executable>
         <exec.classpathScope>${classPathScope}</exec.classpathScope>
     </properties>

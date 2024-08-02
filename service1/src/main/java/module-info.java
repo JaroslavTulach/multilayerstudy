@@ -1,5 +1,9 @@
+import org.enso.test.layer.api.Api;
+import org.enso.test.layer.service1.ServiceOne;
+
 module ServiceOne {
     requires Api;
-    provides org.enso.test.layer.api.Api with 
-            org.enso.test.layer.service1.ServiceOne;
+    provides Api with ServiceOne;
+
+    exports org.enso.test.layer.service1 to Use;
 }

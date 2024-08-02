@@ -5,23 +5,28 @@ import org.enso.test.layer.api.Api;
 
 import java.lang.module.Configuration;
 import java.lang.module.ModuleFinder;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
+import org.enso.test.layer.service1.ServiceOne;
+import org.enso.test.layer.service2.ServiceTwo;
 
 public class Use {
 
     public static void main(String[] args) throws Exception {
-        if (args.length == 0) {
-            bootLayer();
-        } else {
-            switch (args[0]) {
-                case "boot" -> bootLayer();
-                default -> throw new IllegalArgumentException("Unknown command: " + args[0]);
-            }
+        var action = "single";
+        if (args.length > 0) {
+            action = args[0];
+        }
+        switch (action) {
+            case "boot" -> bootLayer();
+            case "single" -> singleLayer();
+            default -> throw new IllegalArgumentException("Unknown command: " + args[0]);
         }
     }
 
@@ -30,19 +35,42 @@ public class Use {
     }
 
     private static void singleLayer() throws Exception {
-        final URL myUrl = Use.class.getProtectionDomain().getCodeSource().getLocation();
-        var myPath = Paths.get(myUrl.toURI());
-        ModuleFinder finder = ModuleFinder.of(myPath);
-        final List<String> moduleNames = finder.findAll().stream().map(x -> x.descriptor().name()).collect(Collectors.toList());
-        ModuleLayer emptyL = ModuleLayer.empty();
-        ClassLoader emptyLoader = new URLClassLoader(new URL[] { myUrl });
-        final List<Configuration> pConfs = Collections.singletonList(ModuleLayer.boot().configuration());
-        Configuration pConf = Configuration.resolve(finder, pConfs, finder, moduleNames);
-        List<ModuleLayer> pLayers = Collections.singletonList(ModuleLayer.boot());
+        ModuleLayer layer = ModuleLayer.boot();
+
+        URL apiUrl = urlOf(Api.class);
+        URL oneUrl = urlOf(ServiceOne.class);
+        URL twoUrl = urlOf(ServiceTwo.class);
+        ModuleFinder finder = finderOf(apiUrl, oneUrl, twoUrl);
+        var moduleNames = Arrays.asList("Api", "ServiceOne", "ServiceTwo");
+        var loader = new URLClassLoader(new URL[] { apiUrl, oneUrl, twoUrl }, null);
+        var pConfs = Collections.singletonList(layer.configuration());
+        var pConf = Configuration.resolveAndBind(finder, pConfs, ModuleFinder.ofSystem(), moduleNames);
+        var pLayers = Collections.singletonList(layer);
         ModuleLayer.Controller cntrl = ModuleLayer.defineModules(pConf, pLayers, (n) -> {
             System.err.println("loader for " + n);
-            return emptyLoader;
+            return loader;
         });
-        System.out.println("Hello World!" + cntrl.layer().modules());
+        var apiClass = cntrl.layer().findLoader("Api").loadClass(Api.class.getName());
+        assert apiClass.getClassLoader() == loader;
+
+        Thread.currentThread().setContextClassLoader(loader);
+        var reply = apiClass.getMethod("hello").invoke(null);
+        System.out.println(apiClass.getClassLoader() + " " + apiClass.getProtectionDomain().getCodeSource().getLocation() + " says " + reply);
+    }
+
+    private static URL urlOf(Class<?> aClass) {
+        final URL myUrl = aClass.getProtectionDomain().getCodeSource().getLocation();
+        return myUrl;
+    }
+
+    private static ModuleFinder finderOf(URL... urls) {
+        var paths = Arrays.asList(urls).stream().map((u) -> {
+            try {
+                return Paths.get(u.toURI());
+            } catch (URISyntaxException ex) {
+                throw new IllegalStateException(ex);
+            }
+        });
+        return ModuleFinder.of(paths.toArray(Path[]::new));
     }
 }
