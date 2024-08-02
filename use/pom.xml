@@ -29,9 +29,8 @@
         </dependency>
     </dependencies>
     <properties>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
         <exec.mainClass>org.enso.test.layer.use.Use</exec.mainClass>
+        <exec.appArgs></exec.appArgs>
         <exec.vmArgs></exec.vmArgs>
         <exec.args>${exec.vmArgs} -p %classpath -m Use/${exec.mainClass} ${exec.appArgs}</exec.args>
         <exec.executable>java</exec.executable>

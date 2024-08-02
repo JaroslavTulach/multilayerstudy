@@ -15,7 +15,14 @@ import java.util.stream.Collectors;
 public class Use {
 
     public static void main(String[] args) throws Exception {
-        bootLayer();
+        if (args.length == 0) {
+            bootLayer();
+        } else {
+            switch (args[0]) {
+                case "boot" -> bootLayer();
+                default -> throw new IllegalArgumentException("Unknown command: " + args[0]);
+            }
+        }
     }
 
     private static void bootLayer() {

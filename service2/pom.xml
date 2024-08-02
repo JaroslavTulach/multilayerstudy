@@ -12,13 +12,8 @@
         <dependency>
             <groupId>org.enso.test.layer</groupId>
             <artifactId>api</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${project.version}</version>
             <type>jar</type>
         </dependency>
     </dependencies>
-    <properties>
-        <exec.mainClass>org.enso.test.layer.service2.Service2</exec.mainClass>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
-    </properties>
 </project>
