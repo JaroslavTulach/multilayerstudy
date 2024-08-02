@@ -67,10 +67,28 @@ This case sets two `ModuleLayer`s up: one layer for the `Api` module and
 second layer for `ServiceOne` and `ServiceTwo` modules. Verify with:
 
 ```bash
-$ JAVA_HOME=~/bin/graalvm/ mvn -q -f use package exec:exec "-Dexec.appArgs=double"
+$ mvn -q -f use package exec:exec -Dexec.appArgs=double
 ModuleLayerLoader for [Api]  says
 Ciao by ModuleLayerLoader for [ServiceOne, ServiceTwo]
 Ahoj by ModuleLayerLoader for [ServiceOne, ServiceTwo]
 ```
 
 As can be seen the `Api` module finds both services loaded by the other layer.
+
+### Multi Layers
+
+This case sets three `ModuleLayer`s up:
+- one layer for the `Api` module
+- one layer for the `ServiceOne` module
+- one layer for the `ServiceTwo` module
+
+Verify the example by running:
+
+```bash
+$ mvn -q -f use package exec:exec -Dexec.appArgs=multi
+ModuleLayerLoader for [Api]  says
+Ahoj by ModuleLayerLoader for [ServiceOne]
+Ciao by ModuleLayerLoader for [ServiceTwo]
+```
+
+As can be seen the `Api` module finds both services loaded by the other layers.

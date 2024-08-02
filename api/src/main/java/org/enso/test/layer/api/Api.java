@@ -10,12 +10,14 @@ public abstract class Api {
         return hello(Api.class.getModule().getLayer());
     }
 
-    public static String hello(ModuleLayer layer) {
-        ServiceLoader<Api> loader = ServiceLoader.load(layer, Api.class);
+    public static String hello(ModuleLayer... layers) {
         var sb = new StringBuilder();
-        for (var impl : loader) {
-            sb.append("\n");
-            sb.append(impl.sayHi());
+        for (var layer : layers) {
+            ServiceLoader<Api> loader = ServiceLoader.load(layer, Api.class);
+            for (var impl : loader) {
+                sb.append("\n");
+                sb.append(impl.sayHi());
+            }
         }
         return sb.toString();
     }

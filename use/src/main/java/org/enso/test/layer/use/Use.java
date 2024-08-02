@@ -19,7 +19,7 @@ import org.enso.test.layer.service2.ServiceTwo;
 public class Use {
 
     public static void main(String[] args) throws Exception {
-        var action = "boot";
+        var action = "multi";
         if (args.length > 0) {
             action = args[0];
         }
@@ -27,6 +27,7 @@ public class Use {
             case "boot" -> bootLayer();
             case "single" -> singleLayer();
             case "double" -> doubleLayers();
+            case "multi" -> multiLayers();
             default -> throw new IllegalArgumentException("Unknown command: " + args[0]);
         }
     }
@@ -106,7 +107,80 @@ public class Use {
         var serviceOneClass = implLayer.findLoader("ServiceOne").loadClass(ServiceOne.class.getName());
         assert serviceOneClass.getClassLoader() == implLoader;
 
-        var reply = apiClass.getMethod("hello", ModuleLayer.class).invoke(null, implLayer);
+        var reply = apiClass.getMethod("hello", ModuleLayer[].class).invoke(null, (Object) new ModuleLayer[] { implLayer });
+        System.out.println(apiClass.getClassLoader() + "  says " + reply);
+    }
+
+    private static void multiLayers() throws Exception {
+        ModuleLayer apiLayer;
+        Class<?> apiClass;
+        {
+            var layer = ModuleLayer.boot();
+
+            var apiUrl = urlOf(Api.class);
+            var finder = finderOf(apiUrl);
+            var apiNames = Arrays.asList("Api");
+            var loader = new ModuleLayerLoader(new URL[] { apiUrl }, null, apiNames);
+            var pConfs = Collections.singletonList(layer.configuration());
+            var pConf = Configuration.resolveAndBind(finder, pConfs, ModuleFinder.ofSystem(), apiNames);
+            var pLayers = Collections.singletonList(layer);
+            var cntrl = ModuleLayer.defineModules(pConf, pLayers, (n) -> {
+                if (apiNames.contains(n)) {
+                    return loader;
+                } else {
+                    return null;
+                }
+            });
+            apiLayer = cntrl.layer();
+            apiClass = apiLayer.findLoader("Api").loadClass(Api.class.getName());
+            assert apiClass.getClassLoader() == loader;
+        }
+        ClassLoader oneLoader;
+        ModuleLayer oneLayer;
+        {
+            var oneUrl = urlOf(ServiceOne.class);
+            var finder = finderOf(oneUrl);
+            var moduleNames = Arrays.asList("ServiceOne");
+            oneLoader = new ModuleLayerLoader(new URL[] { oneUrl }, apiClass.getClassLoader(), moduleNames);
+            var pConfs = Collections.singletonList(apiLayer.configuration());
+            var pConf = Configuration.resolveAndBind(finder, pConfs, ModuleFinder.ofSystem(), moduleNames);
+            var pLayers = Collections.singletonList(apiLayer);
+            var cntrl = ModuleLayer.defineModules(pConf, pLayers, (n) -> {
+                if (moduleNames.contains(n)) {
+                    return oneLoader;
+                } else {
+                    return null;
+                }
+            });
+            oneLayer = cntrl.layer();
+        }
+        ClassLoader twoLoader;
+        ModuleLayer twoLayer;
+        {
+            var twoUrl = urlOf(ServiceTwo.class);
+            var finder = finderOf(twoUrl);
+            var moduleNames = Arrays.asList("ServiceTwo");
+            twoLoader = new ModuleLayerLoader(new URL[] { twoUrl }, apiClass.getClassLoader(), moduleNames);
+            var pConfs = Collections.singletonList(apiLayer.configuration());
+            var pConf = Configuration.resolveAndBind(finder, pConfs, ModuleFinder.ofSystem(), moduleNames);
+            var pLayers = Collections.singletonList(apiLayer);
+            var cntrl = ModuleLayer.defineModules(pConf, pLayers, (n) -> {
+                if (moduleNames.contains(n)) {
+                    return twoLoader;
+                } else {
+                    return null;
+                }
+            });
+            twoLayer = cntrl.layer();
+        }
+        var apiClass2 = twoLayer.findLoader("Api").loadClass(Api.class.getName());
+        assert apiClass2.getClassLoader() == apiClass2.getClassLoader();
+        var serviceOneClass = oneLayer.findLoader("ServiceOne").loadClass(ServiceOne.class.getName());
+        assert serviceOneClass.getClassLoader() == oneLoader;
+        var serviceTwoClass = twoLayer.findLoader("ServiceTwo").loadClass(ServiceTwo.class.getName());
+        assert serviceTwoClass.getClassLoader() == twoLoader;
+
+        var reply = apiClass.getMethod("hello", ModuleLayer[].class).invoke(null, (Object) new ModuleLayer[] { oneLayer, twoLayer });
         System.out.println(apiClass.getClassLoader() + "  says " + reply);
     }
 
