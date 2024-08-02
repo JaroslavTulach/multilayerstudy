@@ -13,6 +13,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Function;
 import org.enso.test.layer.service1.ServiceOne;
 import org.enso.test.layer.service2.ServiceTwo;
 
@@ -63,6 +64,7 @@ public class Use {
     }
 
     private static void doubleLayers() throws Exception {
+        final ClassLoader baseLoader = new URLClassLoader(new URL[0], null);
         ModuleLayer apiLayer;
         Class<?> apiClass;
         {
@@ -71,7 +73,7 @@ public class Use {
             var apiUrl = urlOf(Api.class);
             var finder = finderOf(apiUrl);
             var apiNames = Arrays.asList("Api");
-            var loader = new ModuleLayerLoader(new URL[] { apiUrl }, null, apiNames);
+            var loader = new ModuleLayerLoader(new URL[] { apiUrl }, baseLoader, apiNames);
             var pConfs = Collections.singletonList(layer.configuration());
             var pConf = Configuration.resolveAndBind(finder, pConfs, ModuleFinder.ofSystem(), apiNames);
             var pLayers = Collections.singletonList(layer);
@@ -88,30 +90,28 @@ public class Use {
         }
         var oneUrl = urlOf(ServiceOne.class);
         var twoUrl = urlOf(ServiceTwo.class);
-        var finder = finderOf(oneUrl, twoUrl);
-        var moduleNames = Arrays.asList("ServiceOne", "ServiceTwo");
+        var useUrl = urlOf(Use.class);
+        var finder = finderOf(oneUrl, twoUrl, useUrl);
+        var moduleNames = Arrays.asList("ServiceOne", "ServiceTwo", FindCL.FAKE_MODULE_NAME);
         var implLoader = new ModuleLayerLoader(new URL[] { oneUrl, twoUrl }, apiClass.getClassLoader(), moduleNames);
         var pConfs = Collections.singletonList(apiLayer.configuration());
         var pConf = Configuration.resolveAndBind(finder, pConfs, ModuleFinder.ofSystem(), moduleNames);
         var pLayers = Collections.singletonList(apiLayer);
-        var cntrl = ModuleLayer.defineModules(pConf, pLayers, (n) -> {
-            if (moduleNames.contains(n)) {
-                return implLoader;
-            } else {
-                return null;
-            }
-        });
+        var cntrl = ModuleLayer.defineModules(pConf, pLayers, new FindCL(baseLoader, implLoader, moduleNames));
         var implLayer = cntrl.layer();
         var apiClass2 = implLayer.findLoader("Api").loadClass(Api.class.getName());
         assert apiClass2.getClassLoader() == apiClass2.getClassLoader();
         var serviceOneClass = implLayer.findLoader("ServiceOne").loadClass(ServiceOne.class.getName());
         assert serviceOneClass.getClassLoader() == implLoader;
 
-        var reply = apiClass.getMethod("hello", ModuleLayer.class).invoke(null, implLayer);
+        var reply = apiClass.getMethod("hello").invoke(null);
         System.out.println(apiClass.getClassLoader() + "  says " + reply);
     }
 
     private static void multiLayers() throws Exception {
+        final ClassLoader baseLoader = new URLClassLoader(new URL[0], null);
+        final ClassLoader sndLoader = new URLClassLoader(new URL[0], baseLoader);
+
         final ModuleLayer apiLayer;
         final Class<?> apiClass;
         {
@@ -120,7 +120,7 @@ public class Use {
             var apiUrl = urlOf(Api.class);
             var finder = finderOf(apiUrl);
             var apiNames = Arrays.asList("Api");
-            var loader = new ModuleLayerLoader(new URL[] { apiUrl }, null, apiNames);
+            var loader = new ModuleLayerLoader(new URL[] { apiUrl }, sndLoader, apiNames);
             var pConfs = Collections.singletonList(layer.configuration());
             var pConf = Configuration.resolveAndBind(finder, pConfs, ModuleFinder.ofSystem(), apiNames);
             var pLayers = Collections.singletonList(layer);
@@ -139,38 +139,28 @@ public class Use {
         final ModuleLayer oneLayer;
         {
             var oneUrl = urlOf(ServiceOne.class);
-            var finder = finderOf(oneUrl);
-            var moduleNames = Arrays.asList("ServiceOne");
+            var useUrl = urlOf(Use.class);
+            var finder = finderOf(oneUrl, useUrl);
+            var moduleNames = Arrays.asList("ServiceOne", FindCL.FAKE_MODULE_NAME);
             oneLoader = new ModuleLayerLoader(new URL[] { oneUrl }, apiClass.getClassLoader(), moduleNames);
             var pConfs = Collections.singletonList(apiLayer.configuration());
             var pConf = Configuration.resolveAndBind(finder, pConfs, ModuleFinder.ofSystem(), moduleNames);
             var pLayers = Collections.singletonList(apiLayer);
-            var cntrl = ModuleLayer.defineModules(pConf, pLayers, (n) -> {
-                if (moduleNames.contains(n)) {
-                    return oneLoader;
-                } else {
-                    return null;
-                }
-            });
+            var cntrl = ModuleLayer.defineModules(pConf, pLayers, new FindCL(baseLoader, oneLoader, moduleNames));
             oneLayer = cntrl.layer();
         }
         final ClassLoader twoLoader;
         final ModuleLayer twoLayer;
         {
             var twoUrl = urlOf(ServiceTwo.class);
-            var finder = finderOf(twoUrl);
-            var moduleNames = Arrays.asList("ServiceTwo");
+            var useUrl = urlOf(Use.class);
+            var finder = finderOf(twoUrl, useUrl);
+            var moduleNames = Arrays.asList("ServiceTwo", FindCL.FAKE_MODULE_NAME);
             twoLoader = new ModuleLayerLoader(new URL[] { twoUrl }, apiClass.getClassLoader(), moduleNames);
             var pConfs = Collections.singletonList(apiLayer.configuration());
             var pConf = Configuration.resolveAndBind(finder, pConfs, ModuleFinder.ofSystem(), moduleNames);
             var pLayers = Collections.singletonList(apiLayer);
-            var cntrl = ModuleLayer.defineModules(pConf, pLayers, (n) -> {
-                if (moduleNames.contains(n)) {
-                    return twoLoader;
-                } else {
-                    return null;
-                }
-            });
+            var cntrl = ModuleLayer.defineModules(pConf, pLayers, new FindCL(sndLoader, twoLoader, moduleNames));
             twoLayer = cntrl.layer();
         }
         var apiClass2 = twoLayer.findLoader("Api").loadClass(Api.class.getName());
@@ -180,25 +170,7 @@ public class Use {
         var serviceTwoClass = twoLayer.findLoader("ServiceTwo").loadClass(ServiceTwo.class.getName());
         assert serviceTwoClass.getClassLoader() == twoLoader;
 
-        final ModuleLayer allLayer;
-        {
-            var finder = finderOf();
-            var moduleNames = Arrays.<String>asList();
-            var useLoader = new ModuleLayerLoader(new URL[0], apiClass.getClassLoader(), moduleNames);
-            var pConfs = Arrays.asList(apiLayer.configuration(), oneLayer.configuration(), twoLayer.configuration());
-            var pConf = Configuration.resolveAndBind(finder, pConfs, ModuleFinder.ofSystem(), moduleNames);
-            var pLayers = Arrays.asList(apiLayer, oneLayer, twoLayer);
-            var cntrl = ModuleLayer.defineModules(pConf, pLayers, (n) -> {
-                if (moduleNames.contains(n)) {
-                    return useLoader;
-                } else {
-                    return null;
-                }
-            });
-            allLayer = cntrl.layer();
-        }
-
-        var reply = apiClass.getMethod("hello", ModuleLayer.class).invoke(null, allLayer);
+        var reply = apiClass.getMethod("hello").invoke(null);
         System.out.println(apiClass.getClassLoader() + "  says " + reply);
     }
 
@@ -218,7 +190,7 @@ public class Use {
         return ModuleFinder.of(paths.toArray(Path[]::new));
     }
 
-    private static class ModuleLayerLoader extends URLClassLoader {
+    private static final class ModuleLayerLoader extends URLClassLoader {
 
         private final List<String> moduleNames;
 
@@ -241,6 +213,31 @@ public class Use {
         @Override
         public String toString() {
             return "ModuleLayerLoader for " + moduleNames;
+        }
+    }
+
+    private static final class FindCL implements Function<String, ClassLoader> {
+        static final String FAKE_MODULE_NAME = "Use";
+
+        private final ClassLoader useLoader;
+        private final ClassLoader loader;
+        private final List<String> moduleNames;
+
+        FindCL(ClassLoader useLoader, ClassLoader loader, List<String> moduleNames) {
+            this.useLoader = useLoader;
+            this.loader = loader;
+            this.moduleNames = moduleNames;
+        }
+
+        @Override
+        public ClassLoader apply(String module) {
+            if (FAKE_MODULE_NAME.equals(module)) {
+                return useLoader;
+            }
+            if (moduleNames.contains(module)) {
+                return loader;
+            }
+            return null;
         }
     }
 }
