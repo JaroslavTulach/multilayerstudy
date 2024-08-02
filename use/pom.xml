@@ -8,6 +8,26 @@
     </parent>
     <artifactId>use</artifactId>
     <packaging>jar</packaging>
+    <dependencies>
+        <dependency>
+            <groupId>org.enso.test.layer</groupId>
+            <artifactId>api</artifactId>
+            <version>${project.version}</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.enso.test.layer</groupId>
+            <artifactId>service1</artifactId>
+            <version>${project.version}</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.enso.test.layer</groupId>
+            <artifactId>service2</artifactId>
+            <version>${project.version}</version>
+            <type>jar</type>
+        </dependency>
+    </dependencies>
     <properties>
         <exec.mainClass>org.enso.test.layer.use.Use</exec.mainClass>
         <maven.compiler.source>11</maven.compiler.source>

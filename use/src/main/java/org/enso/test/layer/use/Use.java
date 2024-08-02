@@ -1,5 +1,8 @@
 package org.enso.test.layer.use;
 
+
+import org.enso.test.layer.api.Api;
+
 import java.lang.module.Configuration;
 import java.lang.module.ModuleFinder;
 import java.net.URL;
@@ -12,6 +15,14 @@ import java.util.stream.Collectors;
 public class Use {
 
     public static void main(String[] args) throws Exception {
+        bootLayer();
+    }
+
+    private static void bootLayer() {
+        System.err.println("bootLayer says: " + Api.hello());
+    }
+
+    private static void singleLayer() throws Exception {
         final URL myUrl = Use.class.getProtectionDomain().getCodeSource().getLocation();
         var myPath = Paths.get(myUrl.toURI());
         ModuleFinder finder = ModuleFinder.of(myPath);
