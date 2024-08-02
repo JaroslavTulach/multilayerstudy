@@ -1,5 +1,50 @@
 # Case Study of using `ModuleLayer`
 
+Java introduced [Module system](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/module/package-summary.html)
+in JDK 9. It solves dependencies among modules and also registration
+and discovery of services via [ServiceLoader](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/ServiceLoader.html).
+That works reasonably well and is subject of many introductory tutorials.
+While this case study describes such a simple _"Boot Layer"_ case as well,
+the goal of this study is to describe something way more complex.
+
+Java module system offers **isolation** via so called [ModuleLayer](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/ModuleLayer.html)s.
+There can be any number of layers and they run in a complete isolation.
+Useful for contrainers that need to run _unknown libraries along each other_.
+Layers may have dependencies among each other - as such one can
+form a _hierarchy of isolated layers_ and share those providing some APIs
+and isolate those that need to be isolated.
+
+One question remains: How can one use `ServiceLoader` in such a _multi layer_ setup? Is it possible
+to **collect services from all layers**?
+
+
+## TL;DR
+
+The short answer is **yes**. The longer answer is given in _"Multi Layers"_
+example. The short steps are:
+- define [module with Api](https://github.com/JaroslavTulach/multilayerstudy/blob/master/api/src/main/java/org/enso/test/layer/api/Api.java)
+- use `ServiceLoader.load(Api.class, Api.class.getClassLoader())` to load all implementations
+- put that module into its own [ModuleLayer](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/ModuleLayer.html)
+with special _parent class loader_ (described later)
+- define as many modules providing implementation of the `Api` interface
+- group those modules into as many [ModuleLayer](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/ModuleLayer.html)s
+as necessary for isolation
+- create an artificial, empty module
+- put that artificial module into each of those layers
+- create a chain of dummy `ClassLoader` instances linked via `getParent()` field
+- in each of the layers associate the artificial module with one of the class loaders
+- when defining the _module layer_ with `Api` module, set its parent class loader to
+the chain of the classloaders
+
+The search logic in [ServiceLoader.load](https://docs.oracle.com/en%2Fjava%2Fjavase%2F21%2Fdocs%2Fapi%2F%2F/java.base/java/util/ServiceLoader.html#load(java.lang.Class,java.lang.ClassLoader))
+in the _"bottom layer"_ of `Api` module will scan all parent classloader layers and
+thanks to the artificial chain of parent classloaders, it will find implementations
+from all the [ModuleLayer](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/ModuleLayer.html)
+that otherwise depend on the _"botton layer"_.
+
+Full implementation is in [multiLayers() method](https://github.com/JaroslavTulach/multilayerstudy/blob/d542d1532a29d9cd8e30a1f7246dc609ad5daae3/use/src/main/java/org/enso/test/layer/use/Use.java#L111).
+Instructions how to use and debug the example are in the _"Multi Layers"_ section.
+
 ### Building
 
 First of build all the Maven projects with:
