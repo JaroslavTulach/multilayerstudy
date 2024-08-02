@@ -19,7 +19,7 @@ import org.enso.test.layer.service2.ServiceTwo;
 public class Use {
 
     public static void main(String[] args) throws Exception {
-        var action = "multi";
+        var action = "boot";
         if (args.length > 0) {
             action = args[0];
         }
@@ -107,13 +107,13 @@ public class Use {
         var serviceOneClass = implLayer.findLoader("ServiceOne").loadClass(ServiceOne.class.getName());
         assert serviceOneClass.getClassLoader() == implLoader;
 
-        var reply = apiClass.getMethod("hello", ModuleLayer[].class).invoke(null, (Object) new ModuleLayer[] { implLayer });
+        var reply = apiClass.getMethod("hello", ModuleLayer.class).invoke(null, implLayer);
         System.out.println(apiClass.getClassLoader() + "  says " + reply);
     }
 
     private static void multiLayers() throws Exception {
-        ModuleLayer apiLayer;
-        Class<?> apiClass;
+        final ModuleLayer apiLayer;
+        final Class<?> apiClass;
         {
             var layer = ModuleLayer.boot();
 
@@ -135,8 +135,8 @@ public class Use {
             apiClass = apiLayer.findLoader("Api").loadClass(Api.class.getName());
             assert apiClass.getClassLoader() == loader;
         }
-        ClassLoader oneLoader;
-        ModuleLayer oneLayer;
+        final ClassLoader oneLoader;
+        final ModuleLayer oneLayer;
         {
             var oneUrl = urlOf(ServiceOne.class);
             var finder = finderOf(oneUrl);
@@ -154,8 +154,8 @@ public class Use {
             });
             oneLayer = cntrl.layer();
         }
-        ClassLoader twoLoader;
-        ModuleLayer twoLayer;
+        final ClassLoader twoLoader;
+        final ModuleLayer twoLayer;
         {
             var twoUrl = urlOf(ServiceTwo.class);
             var finder = finderOf(twoUrl);
@@ -180,7 +180,25 @@ public class Use {
         var serviceTwoClass = twoLayer.findLoader("ServiceTwo").loadClass(ServiceTwo.class.getName());
         assert serviceTwoClass.getClassLoader() == twoLoader;
 
-        var reply = apiClass.getMethod("hello", ModuleLayer[].class).invoke(null, (Object) new ModuleLayer[] { oneLayer, twoLayer });
+        final ModuleLayer allLayer;
+        {
+            var finder = finderOf();
+            var moduleNames = Arrays.<String>asList();
+            var useLoader = new ModuleLayerLoader(new URL[0], apiClass.getClassLoader(), moduleNames);
+            var pConfs = Arrays.asList(apiLayer.configuration(), oneLayer.configuration(), twoLayer.configuration());
+            var pConf = Configuration.resolveAndBind(finder, pConfs, ModuleFinder.ofSystem(), moduleNames);
+            var pLayers = Arrays.asList(apiLayer, oneLayer, twoLayer);
+            var cntrl = ModuleLayer.defineModules(pConf, pLayers, (n) -> {
+                if (moduleNames.contains(n)) {
+                    return useLoader;
+                } else {
+                    return null;
+                }
+            });
+            allLayer = cntrl.layer();
+        }
+
+        var reply = apiClass.getMethod("hello", ModuleLayer.class).invoke(null, allLayer);
         System.out.println(apiClass.getClassLoader() + "  says " + reply);
     }
 
@@ -204,7 +222,7 @@ public class Use {
 
         private final List<String> moduleNames;
 
-        public ModuleLayerLoader(URL[] urls, ClassLoader parent, List<String> moduleNames) {
+        ModuleLayerLoader(URL[] urls, ClassLoader parent, List<String> moduleNames) {
             super(urls, parent);
             this.moduleNames = moduleNames;
         }
