@@ -26,6 +26,7 @@ public class Use {
         switch (action) {
             case "boot" -> bootLayer();
             case "single" -> singleLayer();
+            case "multi" -> multiLayers();
             default -> throw new IllegalArgumentException("Unknown command: " + args[0]);
         }
     }
@@ -57,6 +58,55 @@ public class Use {
         assert apiClass.getClassLoader() == loader;
 
         var reply = apiClass.getMethod("hello").invoke(null);
+        System.out.println(apiClass.getClassLoader() + " " + apiClass.getProtectionDomain().getCodeSource().getLocation() + " says " + reply);
+    }
+
+    private static void multiLayers() throws Exception {
+        ModuleLayer apiLayer;
+        Class<?> apiClass;
+        {
+            var layer = ModuleLayer.boot();
+
+            var apiUrl = urlOf(Api.class);
+            var finder = finderOf(apiUrl);
+            var apiNames = Arrays.asList("Api");
+            var loader = new ModulesClassLoader(new URL[] { apiUrl }, null, apiNames);
+            var pConfs = Collections.singletonList(layer.configuration());
+            var pConf = Configuration.resolveAndBind(finder, pConfs, ModuleFinder.ofSystem(), apiNames);
+            var pLayers = Collections.singletonList(layer);
+            var cntrl = ModuleLayer.defineModules(pConf, pLayers, (n) -> {
+                if (apiNames.contains(n)) {
+                    return loader;
+                } else {
+                    return null;
+                }
+            });
+            apiLayer = cntrl.layer();
+            apiClass = apiLayer.findLoader("Api").loadClass(Api.class.getName());
+            assert apiClass.getClassLoader() == loader;
+        }
+        var oneUrl = urlOf(ServiceOne.class);
+        var twoUrl = urlOf(ServiceTwo.class);
+        var finder = finderOf(oneUrl, twoUrl);
+        var moduleNames = Arrays.asList("ServiceOne", "ServiceTwo");
+        var implLoader = new ModulesClassLoader(new URL[] { oneUrl, twoUrl }, apiClass.getClassLoader(), moduleNames);
+        var pConfs = Collections.singletonList(apiLayer.configuration());
+        var pConf = Configuration.resolveAndBind(finder, pConfs, ModuleFinder.ofSystem(), moduleNames);
+        var pLayers = Collections.singletonList(apiLayer);
+        var cntrl = ModuleLayer.defineModules(pConf, pLayers, (n) -> {
+            if (moduleNames.contains(n)) {
+                return implLoader;
+            } else {
+                return null;
+            }
+        });
+        var implLayer = cntrl.layer();
+        var apiClass2 = implLayer.findLoader("Api").loadClass(Api.class.getName());
+        assert apiClass2.getClassLoader() == apiClass2.getClassLoader();
+        var serviceOneClass = implLayer.findLoader("ServiceOne").loadClass(ServiceOne.class.getName());
+        assert serviceOneClass.getClassLoader() == implLoader;
+
+        var reply = apiClass.getMethod("hello", ModuleLayer.class).invoke(null, implLayer);
         System.out.println(apiClass.getClassLoader() + " " + apiClass.getProtectionDomain().getCodeSource().getLocation() + " says " + reply);
     }
 

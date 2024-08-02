@@ -7,7 +7,11 @@ public abstract class Api {
 
 
     public static String hello() {
-        ServiceLoader<Api> loader = ServiceLoader.load(Api.class.getModule().getLayer(), Api.class);
+        return hello(Api.class.getModule().getLayer());
+    }
+
+    public static String hello(ModuleLayer layer) {
+        ServiceLoader<Api> loader = ServiceLoader.load(layer, Api.class);
         var sb = new StringBuilder();
         var sep = "";
         for (var impl : loader) {
