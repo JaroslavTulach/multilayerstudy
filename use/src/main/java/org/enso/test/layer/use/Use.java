@@ -35,18 +35,18 @@ public class Use {
     }
 
     private static void singleLayer() throws Exception {
-        ModuleLayer layer = ModuleLayer.boot();
+        var layer = ModuleLayer.boot();
 
-        URL apiUrl = urlOf(Api.class);
-        URL oneUrl = urlOf(ServiceOne.class);
-        URL twoUrl = urlOf(ServiceTwo.class);
-        ModuleFinder finder = finderOf(apiUrl, oneUrl, twoUrl);
+        var apiUrl = urlOf(Api.class);
+        var oneUrl = urlOf(ServiceOne.class);
+        var twoUrl = urlOf(ServiceTwo.class);
+        var finder = finderOf(apiUrl, oneUrl, twoUrl);
         var moduleNames = Arrays.asList("Api", "ServiceOne", "ServiceTwo");
         var loader = new ModulesClassLoader(new URL[] { apiUrl, oneUrl, twoUrl }, null, moduleNames);
         var pConfs = Collections.singletonList(layer.configuration());
         var pConf = Configuration.resolveAndBind(finder, pConfs, ModuleFinder.ofSystem(), moduleNames);
         var pLayers = Collections.singletonList(layer);
-        ModuleLayer.Controller cntrl = ModuleLayer.defineModules(pConf, pLayers, (n) -> {
+        var cntrl = ModuleLayer.defineModules(pConf, pLayers, (n) -> {
             if (moduleNames.contains(n)) {
                 return loader;
             } else {
