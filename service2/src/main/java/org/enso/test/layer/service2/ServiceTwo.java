@@ -6,6 +6,6 @@ public class ServiceTwo extends Api {
 
     @Override
     public String sayHi() {
-        return "Ciao";
+        return "Ciao by " + getClass().getClassLoader();
     }
 }

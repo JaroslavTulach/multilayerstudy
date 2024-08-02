@@ -13,11 +13,9 @@ public abstract class Api {
     public static String hello(ModuleLayer layer) {
         ServiceLoader<Api> loader = ServiceLoader.load(layer, Api.class);
         var sb = new StringBuilder();
-        var sep = "";
         for (var impl : loader) {
-            sb.append(sep);
+            sb.append("\n");
             sb.append(impl.sayHi());
-            sep = " ";
         }
         return sb.toString();
     }

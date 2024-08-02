@@ -5,6 +5,6 @@ import org.enso.test.layer.api.Api;
 public class ServiceOne extends Api {
     @Override
     public String sayHi() {
-        return "Ahoj";
+        return "Ahoj by " + getClass().getClassLoader();
     }
 }

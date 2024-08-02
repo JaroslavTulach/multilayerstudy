@@ -19,14 +19,14 @@ import org.enso.test.layer.service2.ServiceTwo;
 public class Use {
 
     public static void main(String[] args) throws Exception {
-        var action = "single";
+        var action = "boot";
         if (args.length > 0) {
             action = args[0];
         }
         switch (action) {
             case "boot" -> bootLayer();
             case "single" -> singleLayer();
-            case "multi" -> multiLayers();
+            case "double" -> doubleLayers();
             default -> throw new IllegalArgumentException("Unknown command: " + args[0]);
         }
     }
@@ -43,7 +43,7 @@ public class Use {
         var twoUrl = urlOf(ServiceTwo.class);
         var finder = finderOf(apiUrl, oneUrl, twoUrl);
         var moduleNames = Arrays.asList("Api", "ServiceOne", "ServiceTwo");
-        var loader = new ModulesClassLoader(new URL[] { apiUrl, oneUrl, twoUrl }, null, moduleNames);
+        var loader = new ModuleLayerLoader(new URL[] { apiUrl, oneUrl, twoUrl }, null, moduleNames);
         var pConfs = Collections.singletonList(layer.configuration());
         var pConf = Configuration.resolveAndBind(finder, pConfs, ModuleFinder.ofSystem(), moduleNames);
         var pLayers = Collections.singletonList(layer);
@@ -58,10 +58,10 @@ public class Use {
         assert apiClass.getClassLoader() == loader;
 
         var reply = apiClass.getMethod("hello").invoke(null);
-        System.out.println(apiClass.getClassLoader() + " " + apiClass.getProtectionDomain().getCodeSource().getLocation() + " says " + reply);
+        System.out.println(apiClass.getClassLoader() + " says " + reply);
     }
 
-    private static void multiLayers() throws Exception {
+    private static void doubleLayers() throws Exception {
         ModuleLayer apiLayer;
         Class<?> apiClass;
         {
@@ -70,7 +70,7 @@ public class Use {
             var apiUrl = urlOf(Api.class);
             var finder = finderOf(apiUrl);
             var apiNames = Arrays.asList("Api");
-            var loader = new ModulesClassLoader(new URL[] { apiUrl }, null, apiNames);
+            var loader = new ModuleLayerLoader(new URL[] { apiUrl }, null, apiNames);
             var pConfs = Collections.singletonList(layer.configuration());
             var pConf = Configuration.resolveAndBind(finder, pConfs, ModuleFinder.ofSystem(), apiNames);
             var pLayers = Collections.singletonList(layer);
@@ -89,7 +89,7 @@ public class Use {
         var twoUrl = urlOf(ServiceTwo.class);
         var finder = finderOf(oneUrl, twoUrl);
         var moduleNames = Arrays.asList("ServiceOne", "ServiceTwo");
-        var implLoader = new ModulesClassLoader(new URL[] { oneUrl, twoUrl }, apiClass.getClassLoader(), moduleNames);
+        var implLoader = new ModuleLayerLoader(new URL[] { oneUrl, twoUrl }, apiClass.getClassLoader(), moduleNames);
         var pConfs = Collections.singletonList(apiLayer.configuration());
         var pConf = Configuration.resolveAndBind(finder, pConfs, ModuleFinder.ofSystem(), moduleNames);
         var pLayers = Collections.singletonList(apiLayer);
@@ -107,7 +107,7 @@ public class Use {
         assert serviceOneClass.getClassLoader() == implLoader;
 
         var reply = apiClass.getMethod("hello", ModuleLayer.class).invoke(null, implLayer);
-        System.out.println(apiClass.getClassLoader() + " " + apiClass.getProtectionDomain().getCodeSource().getLocation() + " says " + reply);
+        System.out.println(apiClass.getClassLoader() + "  says " + reply);
     }
 
     private static URL urlOf(Class<?> aClass) {
@@ -126,11 +126,11 @@ public class Use {
         return ModuleFinder.of(paths.toArray(Path[]::new));
     }
 
-    private static class ModulesClassLoader extends URLClassLoader {
+    private static class ModuleLayerLoader extends URLClassLoader {
 
         private final List<String> moduleNames;
 
-        public ModulesClassLoader(URL[] urls, ClassLoader parent, List<String> moduleNames) {
+        public ModuleLayerLoader(URL[] urls, ClassLoader parent, List<String> moduleNames) {
             super(urls, parent);
             this.moduleNames = moduleNames;
         }
@@ -144,6 +144,11 @@ public class Use {
                 }
             }
             return null;
+        }
+
+        @Override
+        public String toString() {
+            return "ModuleLayerLoader for " + moduleNames;
         }
     }
 }
