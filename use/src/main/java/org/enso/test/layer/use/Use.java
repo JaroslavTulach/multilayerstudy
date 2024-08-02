@@ -56,7 +56,6 @@ public class Use {
         var apiClass = cntrl.layer().findLoader("Api").loadClass(Api.class.getName());
         assert apiClass.getClassLoader() == loader;
 
-        Thread.currentThread().setContextClassLoader(loader);
         var reply = apiClass.getMethod("hello").invoke(null);
         System.out.println(apiClass.getClassLoader() + " " + apiClass.getProtectionDomain().getCodeSource().getLocation() + " says " + reply);
     }
