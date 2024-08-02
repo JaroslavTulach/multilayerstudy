@@ -42,13 +42,16 @@ public class Use {
         URL twoUrl = urlOf(ServiceTwo.class);
         ModuleFinder finder = finderOf(apiUrl, oneUrl, twoUrl);
         var moduleNames = Arrays.asList("Api", "ServiceOne", "ServiceTwo");
-        var loader = new URLClassLoader(new URL[] { apiUrl, oneUrl, twoUrl }, null);
+        var loader = new ModulesClassLoader(new URL[] { apiUrl, oneUrl, twoUrl }, null, moduleNames);
         var pConfs = Collections.singletonList(layer.configuration());
         var pConf = Configuration.resolveAndBind(finder, pConfs, ModuleFinder.ofSystem(), moduleNames);
         var pLayers = Collections.singletonList(layer);
         ModuleLayer.Controller cntrl = ModuleLayer.defineModules(pConf, pLayers, (n) -> {
-            System.err.println("loader for " + n);
-            return loader;
+            if (moduleNames.contains(n)) {
+                return loader;
+            } else {
+                return null;
+            }
         });
         var apiClass = cntrl.layer().findLoader("Api").loadClass(Api.class.getName());
         assert apiClass.getClassLoader() == loader;
@@ -72,5 +75,26 @@ public class Use {
             }
         });
         return ModuleFinder.of(paths.toArray(Path[]::new));
+    }
+
+    private static class ModulesClassLoader extends URLClassLoader {
+
+        private final List<String> moduleNames;
+
+        public ModulesClassLoader(URL[] urls, ClassLoader parent, List<String> moduleNames) {
+            super(urls, parent);
+            this.moduleNames = moduleNames;
+        }
+
+        @Override
+        protected Class<?> findClass(String moduleName, String name) {
+            if (moduleNames.contains(moduleName)) {
+                try {
+                    return findClass(name);
+                } catch (ClassNotFoundException ex) {
+                }
+            }
+            return null;
+        }
     }
 }
