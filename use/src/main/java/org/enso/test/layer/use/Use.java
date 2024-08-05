@@ -34,7 +34,7 @@ public class Use {
     }
 
     private static void bootLayer() {
-        System.err.println("bootLayer says: " + Api.hello());
+        println("bootLayer says: ", Api.hello());
     }
 
     private static void singleLayer() throws Exception {
@@ -60,7 +60,7 @@ public class Use {
         assert apiClass.getClassLoader() == loader;
 
         var reply = apiClass.getMethod("hello").invoke(null);
-        System.out.println(apiClass.getClassLoader() + " says " + reply);
+        println(apiClass.getClassLoader() + " says ", reply);
     }
 
     private static void doubleLayers() throws Exception {
@@ -105,7 +105,7 @@ public class Use {
         assert serviceOneClass.getClassLoader() == implLoader;
 
         var reply = apiClass.getMethod("hello").invoke(null);
-        System.out.println(apiClass.getClassLoader() + "  says " + reply);
+        println(apiClass.getClassLoader() + "  says ", reply);
     }
 
     private static void multiLayers() throws Exception {
@@ -171,7 +171,7 @@ public class Use {
         assert serviceTwoClass.getClassLoader() == twoLoader;
 
         var reply = apiClass.getMethod("hello").invoke(null);
-        System.out.println(apiClass.getClassLoader() + "  says " + reply);
+        println(apiClass.getClassLoader() + "  says ", reply);
     }
 
     private static URL urlOf(Class<?> aClass) {
@@ -239,5 +239,12 @@ public class Use {
             }
             return null;
         }
+    }
+
+    private static void println(String prefix, Object reply) {
+        System.out.println(prefix + reply);
+        assert reply instanceof String : "Expecting reply to be a String";
+        assert reply.toString().contains("Ahoj") : "There should be Ahoj in the reply";
+        assert reply.toString().contains("Ciao") : "There should be Ciao in the reply";
     }
 }
