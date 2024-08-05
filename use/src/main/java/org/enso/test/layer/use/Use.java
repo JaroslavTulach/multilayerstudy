@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
+import org.enso.test.layer.fake.Fake;
 import org.enso.test.layer.service1.ServiceOne;
 import org.enso.test.layer.service2.ServiceTwo;
 
@@ -90,8 +91,8 @@ public class Use {
         }
         var oneUrl = urlOf(ServiceOne.class);
         var twoUrl = urlOf(ServiceTwo.class);
-        var useUrl = urlOf(Use.class);
-        var finder = finderOf(oneUrl, twoUrl, useUrl);
+        var fakeUrl = urlOf(Fake.class);
+        var finder = finderOf(oneUrl, twoUrl, fakeUrl);
         var moduleNames = Arrays.asList("ServiceOne", "ServiceTwo", FindCL.FAKE_MODULE_NAME);
         var implLoader = new ModuleLayerLoader(new URL[] { oneUrl, twoUrl }, apiClass.getClassLoader(), moduleNames);
         var pConfs = Collections.singletonList(apiLayer.configuration());
@@ -109,6 +110,8 @@ public class Use {
     }
 
     private static void multiLayers() throws Exception {
+        var fakeUrl = urlOf(Fake.class);
+
         final ClassLoader baseLoader = new URLClassLoader(new URL[0], null);
         final ClassLoader sndLoader = new URLClassLoader(new URL[0], baseLoader);
 
@@ -139,8 +142,7 @@ public class Use {
         final ModuleLayer oneLayer;
         {
             var oneUrl = urlOf(ServiceOne.class);
-            var useUrl = urlOf(Use.class);
-            var finder = finderOf(oneUrl, useUrl);
+            var finder = finderOf(oneUrl, fakeUrl);
             var moduleNames = Arrays.asList("ServiceOne", FindCL.FAKE_MODULE_NAME);
             oneLoader = new ModuleLayerLoader(new URL[] { oneUrl }, apiClass.getClassLoader(), moduleNames);
             var pConfs = Collections.singletonList(apiLayer.configuration());
@@ -153,8 +155,7 @@ public class Use {
         final ModuleLayer twoLayer;
         {
             var twoUrl = urlOf(ServiceTwo.class);
-            var useUrl = urlOf(Use.class);
-            var finder = finderOf(twoUrl, useUrl);
+            var finder = finderOf(twoUrl, fakeUrl);
             var moduleNames = Arrays.asList("ServiceTwo", FindCL.FAKE_MODULE_NAME);
             twoLoader = new ModuleLayerLoader(new URL[] { twoUrl }, apiClass.getClassLoader(), moduleNames);
             var pConfs = Collections.singletonList(apiLayer.configuration());
@@ -217,7 +218,7 @@ public class Use {
     }
 
     private static final class FindCL implements Function<String, ClassLoader> {
-        static final String FAKE_MODULE_NAME = "Use";
+        static final String FAKE_MODULE_NAME = "Fake000Module";
 
         private final ClassLoader useLoader;
         private final ClassLoader loader;

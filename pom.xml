@@ -10,6 +10,7 @@
         <module>use</module>
         <module>service1</module>
         <module>service2</module>
+        <module>fake</module>
     </modules>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
