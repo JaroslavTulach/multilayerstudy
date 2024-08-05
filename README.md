@@ -29,7 +29,7 @@ to **collect services from all layers**?
 The short answer is **yes**. The longer answer is given in ["Multi Layers"
 example](#multi-layers). The short steps are:
 - define [module with Api](https://github.com/JaroslavTulach/multilayerstudy/blob/master/api/src/main/java/org/enso/test/layer/api/Api.java)
-- use `ServiceLoader.load(Api.class, Api.class.getClassLoader())` to load all implementations
+- use `ServiceLoader.load(Api.class)` to load all implementations
 - put that module into its own [ModuleLayer](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/ModuleLayer.html)
 with special _parent class loader_ (described later)
 - define as many modules as desirable providing implementation of the `Api` interface
